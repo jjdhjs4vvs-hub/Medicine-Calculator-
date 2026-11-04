@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Medicine Dosage Calculator</title>
+<style>
+:root{--blue:#2563eb;--bg:#f3f6fb;--card:#fff;--text:#111827;--muted:#6b7280;--green:#16a34a;--red:#dc2626}
+*{box-sizing:border-box}
+body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;margin:0;background:var(--bg);color:var(--text)}
+header{background:var(--blue);color:#fff;padding:16px;text-align:center}
+h1{margin:0;font-size:19px}
+.langs{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:10px}
+.langs button{width:auto;margin:0;padding:7px 10px;font-size:12px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.5)}
+.langs button.active{background:#fff;color:var(--blue)}
+main{max-width:680px;margin:14px auto;padding:0 12px 40px}
+.card{background:var(--card);border-radius:14px;padding:16px;margin-bottom:14px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+h2{font-size:16px;margin:0 0 10px}
+label{display:block;font-size:13px;color:var(--muted);margin:8px 0 4px}
+input,select{width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;font-size:16px}
+button{width:100%;margin-top:12px;padding:12px;border:0;border-radius:10px;background:var(--blue);color:#fff;font-size:16px;font-weight:600}
+.result{margin-top:12px;padding:12px;border-radius:10px;background:#ecfdf5;color:#065f46;font-weight:700;white-space:pre-line;display:none}
+.error{margin-top:12px;padding:12px;border-radius:10px;background:#fef2f2;color:var(--red);font-weight:700;display:none}
+.note{font-size:12px;color:var(--muted);margin-top:8px}
+.tabs{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.tab{flex:1;min-width:100px;padding:10px;border-radius:10px;border:1px solid #d1d5db;background:#fff;font-weight:600;font-size:13px}
+.tab.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+.hidden{display:none}
+.patient{display:flex;gap:8px;margin-bottom:12px}
+.patient button{margin:0;padding:12px;font-size:14px}
+.patient button.active{background:var(--green)}
+.rtl{direction:rtl;text-align:right}
+</style>
+</head>
+<body>
+<header>
+<h1 id="title">💊 Medicine Dosage Calculator</h1>
+<div class="langs">
+<button data-lang="en" class="active">English</button>
+<button data-lang="el">Ελληνικά</button>
+<button data-lang="bg">Български</button>
+<button data-lang="ru">Русский</button>
+<button data-lang="ar">العربية</button>
+</div>
+</header>
+<main>
+<div class="patient">
+<button id="adultBtn" class="tab active" onclick="setPatient('adult')">Adult</button>
+<button id="pedBtn" class="tab" onclick="setPatient('pediatric')">Pediatric</button>
+</div>
+
+<div class="tabs">
+<button id="tabWeight" class="tab active" onclick="show('weight',this)">Weight-based</button>
+<button id="tabLiquid" class="tab" onclick="show('liquid',this)">Tablet/Liquid</button>
+<button id="tabIV" class="tab" onclick="show('iv',this)">IV rate</button>
+</div>
+
+<div id="weight" class="card">
+<h2 id="wTitle">Dose from weight</h2>
+<label id="wWeightL">Weight (kg)</label><input id="w_weight" type="number" step="0.1" placeholder="70">
+<label id="wMgkgL">Ordered dose (mg/kg)</label><input id="w_mgkg" type="number" step="0.001" placeholder="10">
+<label id="wDoseL">Total ordered dose (mg)</label><input id="w_total" type="number" step="0.001" placeholder="500" class="hidden">
+<label id="wConcL">Concentration (mg/mL)</label><input id="w_conc" type="number" step="0.001" placeholder="50">
+<button id="wBtn" onclick="calcWeight()">Calculate</button>
+<div id="w_res" class="result"></div><div id="w_err" class="error"></div>
+<p id="wNote" class="note">Total mg = weight × mg/kg; volume = total mg ÷ mg/mL.</p>
+</div>
+
+<div id="liquid" class="card hidden">
+<h2 id="lTitle">Tablet or liquid dose</h2>
+<label id="lOrderedL">Ordered dose (mg)</label><input id="l_ordered" type="number" step="0.001" placeholder="500">
+<label id="lStrengthL">Available strength (mg per tablet OR mg per mL)</label><input id="l_strength" type="number" step="0.001" placeholder="250">
+<label id="lUnitL">Unit</label><select id="l_unit"><option value="tablet">Tablets</option><option value="mL">mL</option></select>
+<button id="lBtn" onclick="calcLiquid()">Calculate</button>
+<div id="l_res" class="result"></div><div id="l_err" class="error"></div>
+<p id="lNote" class="note">Amount = ordered dose ÷ strength.</p>
+</div>
+
+<div id="iv" class="card hidden">
+<h2 id="ivTitle">IV infusion rate</h2>
+<label id="ivVolL">Volume to infuse (mL)</label><input id="iv_vol" type="number" step="0.1" placeholder="500">
+<label id="ivHoursL">Time (hours)</label><input id="iv_hours" type="number" step="0.1" placeholder="4">
+<label id="ivSetL">Drip set (drops/mL)</label><select id="iv_set"><option value="10">10 drops/mL</option><option value="15">15 drops/mL</option><option value="20">20 drops/mL</option><option value="60" selected>60 drops/mL</option></select>
+<button id="ivBtn" onclick="calcIV()">Calculate</button>
+<div id="iv_res" class="result"></div><div id="iv_err" class="error"></div>
+<p id="ivNote" class="note">mL/hr = volume ÷ hours; drops/min = (volume × drops/mL) ÷ (hours × 60).</p>
+</div>
+
+<p id="safety" class="note" style="text-align:center">For study/practice only. Always verify with a prescriber, protocol, and pharmacy.</p>
+</main>
+<script>
+const T={
+en:{title:"💊 Medicine Dosage Calculator",adult:"Adult",ped:"Pediatric",weight:"Weight-based",liquid:"Tablet/Liquid",iv:"IV rate",
+wTitle:"Dose from weight",wWeightL:"Weight (kg)",wMgkgL:"Ordered dose (mg/kg)",wDoseL:"Total ordered dose (mg)",wConcL:"Concentration (mg/mL)",calc:"Calculate",
+lTitle:"Tablet or liquid dose",lOrderedL:"Ordered dose (mg)",lStrengthL:"Available strength (mg per tablet OR mg per mL)",lUnitL:"Unit",tablet:"Tablets",mL:"mL",
+ivTitle:"IV infusion rate",ivVolL:"Volume to infuse (mL)",ivHoursL:"Time (hours)",ivSetL:"Drip set (drops/mL)",
+wNote:"Total mg = weight × mg/kg; volume = total mg ÷ mg/mL.",lNote:"Amount = ordered dose ÷ strength.",ivNote:"mL/hr = volume ÷ hours; drops/min = (volume × drops/mL) ÷ (hours × 60).",
+safety:"For study/practice only. Always verify with a prescriber, protocol, and pharmacy.",
+totalDose:"Total dose:",volume:"Volume:",give:"Give:",rate:"Infusion rate:",drips:"Drip rate:",err1:"Enter all required values.",err2:"Values must be greater than zero."},
+el:{title:"💊 Υπολογιστής Δοσολογίας Φαρμάκων",adult:"Ενήλικας",ped:"Παιδιατρικός",weight:"Βάσει βάρους",liquid:"Χάπι/Υγρό",iv:"Ενδοφλέβια",
+wTitle:"Δόση βάσει βάρους",wWeightL:"Βάρος (kg)",wMgkgL:"Συνταγογραφημένη δόση (mg/kg)",wDoseL:"Συνολική συνταγογραφημένη δόση (mg)",wConcL:"Συγκέντρωση (mg/mL)",calc:"Υπολογισμός",
+lTitle:"Δόση σε δισκία ή υγρό",lOrderedL:"Συνταγογραφημένη δόση (mg)",lStrengthL:"Διαθέσιμη περιεκτικότητα (mg ανά δισκίο Ή mg/mL)",lUnitL:"Μονάδα",tablet:"Δισκία",mL:"mL",
+ivTitle:"Ρυθμός ενδοφλέβιας έγχυσης",ivVolL:"Όγκος προς έγχυση (mL)",ivHoursL:"Χρόνος (ώρες)",ivSetL:"Σύστημα στάγδην (σταγόνες/mL)",
+wNote:"Συνολικά mg = βάρος × mg/kg· όγκος = συνολικά mg ÷ mg/mL.",lNote:"Ποσότητα = συνταγογραφημένη δόση ÷ περιεκτικότητα.",ivNote:"mL/ώρα = όγκος ÷ ώρες· σταγόνες/λεπτό = (όγκος × σταγόνες/mL) ÷ (ώρες × 60).",
+safety:"Μόνο για μελέτη/εξάσκηση. Επαλήθευε πάντα με ιατρό, πρωτόκολλο και φαρμακείο.",
+totalDose:"Συνολική δόση:",volume:"Όγκος:",give:"Χορήγησε:",rate:"Ρυθμός έγχυσης:",drips:"Σταγόνες/λεπτό:",err1:"Συμπλήρωσε όλα τα απαραίτητα πεδία.",err2:"Οι τιμές πρέπει να είναι μεγαλύτερες από μηδέν."},
+bg:{title:"💊 Калкулатор за дозировка на лекарства",adult:"Възрастен",ped:"Педиатричен",weight:"Според тегло",liquid:"Таблетка/Течност",iv:"Интравенозно",
+wTitle:"Доза според тегло",wWeightL:"Тегло (kg)",wMgkgL:"Предписана доза (mg/kg)",wDoseL:"Обща предписана доза (mg)",wConcL:"Концентрация (mg/mL)",calc:"Изчисли",
+lTitle:"Доза в таблетки или течност",lOrderedL:"Предписана доза (mg)",lStrengthL:"Налична концентрация (mg на таблетка ИЛИ mg/mL)",lUnitL:"Мерна единица",tablet:"Таблетки",mL:"mL",
+ivTitle:"Скорост на интравенозна инфузия",ivVolL:"Обем за инфузия (mL)",ivHoursL:"Време (часа)",ivSetL:"Капкова система (капки/mL)",
+wNote:"Общо mg = тегло × mg/kg; обем = общо mg ÷ mg/mL.",lNote:"Количество = предписана доза ÷ концентрация.",ivNote:"mL/час = обем ÷ часове; капки/мин = (обем × капки/mL) ÷ (часове × 60).",
+safety:"Само за обучение/упражнение. Винаги проверявай с лекар, протокол и аптека.",
+totalDose:"Обща доза:",volume:"Обем:",give:"Дай:",rate:"Скорост на инфузия:",drips:"Капки/минута:",err1:"Въведи всички задължителни стойности.",err2:"Стойностите трябва да са по-големи от нула."},
+ru:{title:"💊 Калькулятор дозировки лекарств",adult:"Взрослый",ped:"Педиатрический",weight:"По весу",liquid:"Таблетка/Жидкость",iv:"Внутривенно",
+wTitle:"Доза по весу",wWeightL:"Вес (кг)",wMgkgL:"Назначенная доза (мг/кг)",wDoseL:"Общая назначенная доза (мг)",wConcL:"Концентрация (мг/мл)",calc:"Рассчитать",
+lTitle:"Доза в таблетках или жидкости",lOrderedL:"Назначенная доза (мг)",lStrengthL:"Доступная концентрация (мг на таблетку ИЛИ мг/мл)",lUnitL:"Единица",tablet:"Таблетки",mL:"мл",
+ivTitle:"Скорость внутривенной инфузии",ivVolL:"Объём для инфузии (мл)",ivHoursL:"Время (часы)",ivSetL:"Капельница (капель/мл)",
+wNote:"Общее мг = вес × мг/кг; объём = общее мг ÷ мг/мл.",lNote:"Количество = назначенная доза ÷ концентрация.",ivNote:"мл/час = объём ÷ часы; капли/мин = (объём × капли/мл) ÷ (часы × 60).",
+safety:"Только для учёбы/практики. Всегда проверяйте с врачом, протоколом и аптекой.",
+totalDose:"Общая доза:",volume:"Объём:",give:"Ввести:",rate:"Скорость инфузии:",drips:"Капель/мин:",err1:"Введите все необходимые значения.",err2:"Значения должны быть больше нуля."},
+ar:{title:"💊 حاسبة جرعة الدواء",adult:"بالغ",ped:"طفل",weight:"حسب الوزن",liquid:"أقراص/سائل",iv:"وريدي",
+wTitle:"الجرعة حسب الوزن",wWeightL:"الوزن (كغ)",wMgkgL:"الجرعة الموصوفة (ملغ/كغ)",wDoseL:"إجمالي الجرعة الموصوفة (ملغ)",wConcL:"التركيز (ملغ/مل)",calc:"احسب",
+lTitle:"جرعة أقراص أو سائل",lOrderedL:"الجرعة الموصوفة (ملغ)",lStrengthL:"التركيز المتوفر (ملغ لكل قرص أو ملغ/مل)",lUnitL:"الوحدة",tablet:"أقراص",mL:"مل",
+ivTitle:"معدل التسريب الوريدي",ivVolL:"الحجم المطلوب تسريبه (مل)",ivHoursL:"الوقت (ساعات)",ivSetL:"نظام التنقيط (قطرة/مل)",
+wNote:"إجمالي الملغ = الوزن × ملغ/كغ؛ الحجم = إجمالي الملغ ÷ ملغ/مل.",lNote:"الكمية = الجرعة الموصوفة ÷ التركيز.",ivNote:"مل/ساعة = الحجم ÷ الساعات؛ قطرة/دقيقة = (الحجم × قطرة/مل) ÷ (الساعات × 60).",
+safety:"للدراسة والتدريب فقط. تحقق دائمًا مع الطبيب والبروتوكول والصيدلية.",
+totalDose:"الجرعة الإجمالية:",volume:"الحجم:",give:"أعطِ:",rate:"معدل التسريب:",drips:"قطرة/دقيقة:",err1:"أدخل جميع القيم المطلوبة.",err2:"يجب أن تكون القيم أكبر من صفر."}
+};
+let lang='en', patient='adult';
+function setLang(l){lang=l;document.documentElement.lang=l;document.body.classList.toggle('rtl',l==='ar');
+document.querySelectorAll('.langs button').forEach(b=>b.classList.toggle('active',b.dataset.lang===l));applyText()}
+function setPatient(p){patient=p;document.getElementById('adultBtn').classList.toggle('active',p==='adult');document.getElementById('pedBtn').classList.toggle('active',p==='pediatric');
+document.getElementById('w_weight').classList.toggle('hidden',p==='pediatric');document.getElementById('w_mgkg').classList.toggle('hidden',p==='pediatric');
+document.getElementById('w_total').classList.toggle('hidden',p!=='pediatric');applyText()}
+function applyText(){const t=T[lang];
+document.getElementById('title').textContent=t.title;
+document.getElementById('adultBtn').textContent=t.adult;document.getElementById('pedBtn').textContent=t.ped;
+document.getElementById('tabWeight').textContent=t.weight;document.getElementById('tabLiquid').textContent=t.liquid;document.getElementById('tabIV').textContent=t.iv;
+document.getElementById('wTitle').textContent=t.wTitle;document.getElementById('wWeightL').textContent=t.wWeightL;document.getElementById('wConcL').textContent=t.wConcL;
+document.getElementById('wMgkgL').textContent=t.wMgkgL;document.getElementById('wDoseL').textContent=t.wDoseL;
+document.getElementById('wBtn').textContent=t.calc;document.getElementById('lBtn').textContent=t.calc;document.getElementById('ivBtn').textContent=t.calc;
+document.getElementById('lTitle').textContent=t.lTitle;document.getElementById('lOrderedL').textContent=t.lOrderedL;document.getElementById('lStrengthL').textContent=t.lStrengthL;document.getElementById('lUnitL').textContent=t.lUnitL;
+document.getElementById('l_unit').options[0].text=t.tablet;document.getElementById('l_unit').options[1].text=t.mL;
+document.getElementById('ivTitle').textContent=t.ivTitle;document.getElementById('ivVolL').textContent=t.ivVolL;document.getElementById('ivHoursL').textContent=t.ivHoursL;document.getElementById('ivSetL').textContent=t.ivSetL;
+document.getElementById('wNote').textContent=t.wNote;document.getElementById('lNote').textContent=t.lNote;document.getElementById('ivNote').textContent=t.ivNote;
+document.getElementById('safety').textContent=t.safety}
+function show(id,btn){document.querySelectorAll('.card').forEach(c=>c.classList.add('hidden'));document.getElementById(id).classList.remove('hidden');
+document.querySelectorAll('.tabs .tab').forEach(x=>x.classList.remove('active'));btn.classList.add('active')}
+function err(id,msg){const e=document.getElementById(id);e.style.display='block';e.textContent=msg;document.getElementById(id.replace('err','res')).style.display='none'}
+function ok(id,msg){const r=document.getElementById(id);r.style.display='block';r.textContent=msg;document.getElementById(id.replace('res','err')).style.display='none'}
+function calcWeight(){const t=T[lang];const c=+document.getElementById('w_conc').value;
+if(patient==='adult'){const w=+document.getElementById('w_weight').value,m=+document.getElementById('w_mgkg').value;
+if(!w||!m||!c)return err('w_err',t.err1);if(w<=0||m<=0||c<=0)return err('w_err',t.err2);
+const mg=w*m,v=mg/c;ok('w_res',`${t.totalDose} ${mg.toFixed(2)} mg\n${t.volume} ${v.toFixed(2)} mL`)}
+else{const mg=+document.getElementById('w_total').value;if(!mg||!c)return err('w_err',t.err1);if(mg<=0||c<=0)return err('w_err',t.err2);
+ok('w_res',`${t.totalDose} ${mg.toFixed(2)} mg\n${t.volume} ${(mg/c).toFixed(2)} mL`)}}
+function calcLiquid(){const t=T[lang];const o=+document.getElementById('l_ordered').value,s=+document.getElementById('l_strength').value,u=document.getElementById('l_unit').value;
+if(!o||!s)return err('l_err',t.err1);if(o<=0||s<=0)return err('l_err',t.err2);ok('l_res',`${t.give} ${(o/s).toFixed(2)} ${u}`)}
+function calcIV(){const t=T[lang];const v=+document.getElementById('iv_vol').value,h=+document.getElementById('iv_hours').value,d=+document.getElementById('iv_set').value;
+if(!v||!h)return err('iv_err',t.err1);if(v<=0||h<=0)return err('iv_err',t.err2);
+ok('iv_res',`${t.rate} ${(v/h).toFixed(2)} mL/hr\n${t.drips} ${Math.round((v*d)/(h*60))}`)}
+document.querySelectorAll('.langs button').forEach(b=>b.onclick=()=>setLang(b.dataset.lang));
+setLang('en');setPatient('adult');
+</script>
+</body>
+</html>
